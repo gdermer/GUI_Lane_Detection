@@ -36,8 +36,6 @@ class Pair<T0, T1> {
         
     }
 
-
-
     
     public void setValue(String value){
         this.value = value;

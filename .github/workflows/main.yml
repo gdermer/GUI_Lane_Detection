@@ -3,32 +3,28 @@ name: Java CI/CD with Maven
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.determine-name.outputs.jar_name }}
 
     steps:
-    # Step 1: Check out the repository code
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # Step 2: Set up the Java Development Kit (JDK)
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
         java-version: '26'
         distribution: 'temurin'
-        cache: 'maven' # Automatically caches your Maven dependencies
+        cache: 'maven'
 
-    # Step 3: Grant execution permission to the Maven Wrapper (if using mvnw)
     - name: Grant Execute Permission for Mvnw
       run: |
         if [ -f mvnw ]; then chmod +x mvnw; fi
 
-    # Step 4: Compile, run tests, and package the application
     - name: Build with Maven
       run: |
         if [ -f mvnw ]; then
@@ -37,9 +33,58 @@ jobs:
           mvn clean package
         fi
 
-    # Step 5: Save the built jar as an artifact
+    # Dynamically find the JAR name to pass to the deployment job
+    - name: Determine Artifact Name
+      id: determine-name
+      run: |
+        JAR_PATH=$(ls target/*.jar | head -n 1)
+        JAR_NAME=$(basename $JAR_PATH)
+        echo "jar_name=$JAR_NAME" >> $GITHUB_OUTPUT
+
+    # Temporary storage to pass the JAR to the next job
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: java-app-artifact
         path: target/*.jar
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test # Ensures deployment only happens if tests pass
+
+    steps:
+    # 1. Download the JAR built in the previous job
+    - name: Download Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: java-app-artifact
+        path: target
+
+    # 2. Copy the JAR file to your remote server using SCP
+    - name: Copy JAR to Server via SSH
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "target/${{ needs.build-and-test.outputs.artifact-name }}"
+        target: "/var/www/app" # Change to your preferred server directory
+        strip_components: 1
+
+    # 3. Connect to the server, stop the old app, and start the new one
+    - name: Restart Application on Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd /var/www/app
+          # Find and stop the currently running Java app safely
+          PID=$(pgrep -f "${{ needs.build-and-test.outputs.artifact-name }}")
+          if [ ! -z "$PID" ]; then
+            kill -15 $PID
+            sleep 5
+          fi
+          # Start the new JAR file in the background
+          nohup java -jar ${{ needs.build-and-test.outputs.artifact-name }} > app.log 2>&1 &

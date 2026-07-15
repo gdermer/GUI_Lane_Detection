@@ -1,0 +1,19 @@
+# Compiled class file
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# Maven / Gradle build directories
+target/
+build/
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+.settings/
+.project
+.classpath

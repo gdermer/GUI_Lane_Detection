@@ -27,7 +27,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <!-- ⚠️ CHANGE THIS to your actual main class path -->
-                            <mainClass>com.example.MainApp</mainClass>
+                            <mainClass>com.mycompany.gsgui.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

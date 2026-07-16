@@ -3,6 +3,8 @@ name: Java CI/CD with Maven
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -10,8 +12,6 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      artifact-name: ${{ steps.determine-name.outputs.jar_name }}
 
     steps:
     - name: Checkout Code
@@ -36,53 +36,8 @@ jobs:
           mvn clean package
         fi
 
-    - name: Determine Artifact Name
-      id: determine-name
-      run: |
-        JAR_PATH=$(ls target/*.jar | head -n 1)
-        JAR_NAME=$(basename $JAR_PATH)
-        echo "jar_name=$JAR_NAME" >> $GITHUB_OUTPUT
-
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v5
       with:
         name: java-app-artifact
         path: target/*.jar
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-
-    steps:
-    - name: Download Build Artifact
-      uses: actions/download-artifact@v5
-      with:
-        name: java-app-artifact
-        path: target
-
-    # Fixed: Switched to stable major release tag @v1
-    - name: Copy JAR to Server via SSH
-      uses: appleboy/scp-action@v1
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        source: "target/${{ needs.build-and-test.outputs.artifact-name }}"
-        target: "/var/www/app"
-        strip_components: 1
-
-    # Fixed: Switched to stable major release tag @v1
-    - name: Restart Application on Server
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        script: |
-          cd /var/www/app
-          PID=$(pgrep -f "${{ needs.build-and-test.outputs.artifact-name }}")
-          if [ ! -z "$PID" ]; then
-            kill -15 $PID
-            sleep 5
-          fi
-          nohup java -jar ${{ needs.build-and-test.outputs.artifact-name }} > app.log 2>&1 &

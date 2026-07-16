@@ -1,14 +1,38 @@
-<plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-jar-plugin</artifactId>
-    <version>3.4.2</version>
-    <configuration>
-        <archive>
-            <manifest>
-                <addClasspath>true</addClasspath>
-                <!-- REPLACE THIS LINE WITH YOUR ACTUAL MAIN CLASS LOCATION -->
-                <mainClass>com.example.MainApp</mainClass>
-            </manifest>
-        </archive>
-    </configuration>
-</plugin>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://apache.org"
+         xmlns:xsi="http://w3.org"
+         xsi:schemaLocation="http://apache.org http://apache.org">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Project Coordinates -->
+    <groupId>com.example</groupId>
+    <artifactId>GSGUI</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <!-- This plugin correctly injects your Main class into the JAR manifest -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <!-- ⚠️ CHANGE THIS to your actual main class path -->
+                            <mainClass>com.example.MainApp</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
